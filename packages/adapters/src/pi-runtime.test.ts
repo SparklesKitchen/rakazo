@@ -1,5 +1,5 @@
 import type { ConnectorTool } from "@rakazo/adapter-kit";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { normalizeAgentToolName, normalizeAgentToolNames, PiAgentRuntime } from "./pi-runtime.js";
 
 function tool(name: string): ConnectorTool {
