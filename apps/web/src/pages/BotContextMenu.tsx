@@ -13,6 +13,7 @@ export function BotContextMenu({
   onCreateSection,
   onToggleUnread,
   onEdit,
+  onWorkMateModelRoute,
   onDuplicate,
   onClear,
   onArchive,
@@ -27,6 +28,7 @@ export function BotContextMenu({
   onCreateSection: () => void;
   onToggleUnread: () => void;
   onEdit: () => void;
+  onWorkMateModelRoute: () => void;
   onDuplicate: () => void;
   onClear: () => void;
   onArchive: () => void;
@@ -94,6 +96,7 @@ export function BotContextMenu({
         />
         <div className="my-1 border-t border-[#343438]" />
         <MenuItem icon={<EditIcon />} label="Edit Profile" onSelect={onEdit} />
+        <MenuItem icon={<EditIcon />} label="WorkMate model route" onSelect={onWorkMateModelRoute} />
         <MenuItem icon={<DuplicateIcon />} label="Duplicate" onSelect={onDuplicate} />
         <div className="my-1 border-t border-[#343438]" />
         <MenuItem icon={<ClearIcon />} label="Clear conversation" onSelect={onClear} />

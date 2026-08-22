@@ -106,6 +106,9 @@ const RoutineSchedule = lazy(() =>
 const VoiceSettingsOverlay = lazy(() =>
   import("./VoiceSettingsOverlay").then((module) => ({ default: module.VoiceSettingsOverlay })),
 );
+const WorkMateModelRouteOverlay = lazy(() =>
+  import("./WorkMateModelRouteOverlay").then((module) => ({ default: module.WorkMateModelRouteOverlay })),
+);
 const CallView = lazy(() => import("./CallView").then((module) => ({ default: module.CallView })));
 
 type Panel = "computer" | "settings" | "routine" | "create" | null;
@@ -146,6 +149,7 @@ export function ShellPage() {
   const [computer, setComputer] = useState<ComputerStatus | null>(null);
   const [pluginsOpen, setPluginsOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
+  const [workMateModelBot, setWorkMateModelBot] = useState<Bot | null>(null);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
@@ -1627,6 +1631,10 @@ export function ShellPage() {
               setPanel("settings");
               setBotMenu(null);
             }}
+            onWorkMateModelRoute={() => {
+              setWorkMateModelBot(contextBot);
+              setBotMenu(null);
+            }}
             onDuplicate={() => {
               setBotMenu(null);
               void rpc.bots.duplicate({ botId: contextBot.id }).then(async (bot) => {
@@ -1715,6 +1723,7 @@ export function ShellPage() {
 
       <Suspense fallback={null}>
         {modelsOpen ? <ModelSettingsOverlay onClose={() => setModelsOpen(false)} /> : null}
+        {workMateModelBot ? <WorkMateModelRouteOverlay bot={workMateModelBot} onClose={() => setWorkMateModelBot(null)} /> : null}
         {voiceOpen ? (
           <VoiceSettingsOverlay
             onClose={() => {
