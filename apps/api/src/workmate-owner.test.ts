@@ -1,8 +1,11 @@
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { workMateActorFromAssertion, workMateBotDefinition } from "./workmate-owner.js";
 
 const secret = "workmate-rakazo-test-secret";
+const ownerSource = readFileSync(fileURLToPath(new URL("./workmate-owner.ts", import.meta.url)), "utf8");
 
 function assertion(payload: Record<string, unknown>) {
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -46,5 +49,9 @@ describe("WorkMate Rakazo owner actor", () => {
       display_name: "WorkMate Cal",
       agent_definition: { role: "Scheduling and availability", tools: ["calendar-sync", "video-conferencing"] },
     }).instructions).toMatch(/native Rakazo skills, instructions, routines, and computer use/i);
+  });
+
+  it("does not overwrite an admin's native Rakazo settings while checking the backfill", () => {
+    expect(ownerSource).not.toContain("await prisma.bot.update({");
   });
 });

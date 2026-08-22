@@ -83,17 +83,10 @@ export async function ensureWorkMateOwnerWorkspace(prisma: PrismaClient, actor: 
   const repos = createRepos(prisma);
   for (const template of templates) {
     const spawnKey = `workmate-template:${template.template_key}`;
-    const definition = workMateBotDefinition(template);
     const current = present.get(spawnKey);
-    if (current) {
-      await prisma.bot.update({
-        where: { id: current.id },
-        data: { ...definition, archivedAt: null },
-      });
-      continue;
-    }
+    if (current) continue;
     await repos.createBot(actor, {
-      ...definition,
+      ...workMateBotDefinition(template),
       notifyOnFinish: true,
       computerMode: "team",
       spawnKey,
