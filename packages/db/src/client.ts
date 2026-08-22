@@ -8,7 +8,11 @@ export function createDb(connectionString: string): { prisma: PrismaClient; pool
   // Rakazo's upstream Prisma models are isolated from WorkMate's private
   // authority schema.  The adapter uses pg directly, so set the server-side
   // search path here rather than relying on Prisma's URL-only schema hint.
-  const pool = new Pool({ connectionString, options: "-c search_path=rakazo_internal" });
+  const pool = new Pool({
+    connectionString,
+    options: "-c search_path=rakazo_internal",
+    ssl: { rejectUnauthorized: false },
+  });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
   return { prisma, pool };
