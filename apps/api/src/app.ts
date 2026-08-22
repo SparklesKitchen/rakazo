@@ -24,7 +24,7 @@ import {
   pushTokenPath,
   ScriptedAgentRuntime,
 } from "@rakazo/adapters";
-import { blockedAuthPaths, createAuth, verifyWorkMateAssertion } from "@rakazo/auth";
+import { blockedAuthPaths, createAuth } from "@rakazo/auth";
 import { createDb, createThreadEvents, type PrismaClient, requireMembership } from "@rakazo/db";
 import { MarkdownMemoryStore } from "@rakazo/memory";
 import { Hono } from "hono";
@@ -32,6 +32,7 @@ import { cors } from "hono/cors";
 import { type AppEnv, loadEnv } from "./env.js";
 import { createRouter } from "./router.js";
 import { mountVoiceHttpRoutes } from "./voice.js";
+import { ensureWorkMateOwnerWorkspace, workMateActorFromAssertion } from "./workmate-owner.js";
 
 export interface AppHandles {
   app: Hono;
@@ -233,7 +234,7 @@ export async function createApp(
   app.use("/rpc/*", async (c, next) => {
     const actor = auth
       ? await betterAuthActor(auth, prisma, c.req.raw)
-      : workmateActor(c.req.raw, env.workmateAssertionSecret!);
+      : await workmateActor(c.req.raw, env.workmateAssertionSecret!, prisma);
     const { matched, response } = await rpc.handle(c.req.raw, {
       prefix: "/rpc",
       context: { actor, signal: c.req.raw.signal },
@@ -294,15 +295,11 @@ async function betterAuthActor(auth: NonNullable<ReturnType<typeof createAuth>>,
   return session?.user ? requireMembership(prisma, session.user.id).catch(() => null) : null;
 }
 
-function workmateActor(request: Request, assertionSecret: string) {
+async function workmateActor(request: Request, assertionSecret: string, prisma: PrismaClient) {
   const header = request.headers.get("authorization");
   const assertion = header?.match(/^Bearer\s+(.+)$/i)?.[1];
-  const claims = verifyWorkMateAssertion(assertion, assertionSecret);
-  // The SaaS Admin handoff has tenant scope only. Existing Rakazo RPCs are
-  // workspace-scoped, so they must remain unavailable until a separate,
-  // scope-complete WorkMate contract is introduced.
-  if (!claims || claims.kind !== "admin-door") return null;
-  return null;
+  const actor = workMateActorFromAssertion(assertion, assertionSecret);
+  return actor ? ensureWorkMateOwnerWorkspace(prisma, actor) : null;
 }
 
 function isTrustedOrigin(origin: string, env: AppEnv) {

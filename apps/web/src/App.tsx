@@ -2,8 +2,8 @@ import { lazy, Suspense, useLayoutEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { authClient } from "./lib/auth";
 import { markAfterPaint, markOnce } from "./lib/performance";
+import { saveWorkMateAssertionFromLocation } from "./lib/workmate-handoff";
 import { ShellPage } from "./pages/Shell";
-import { WorkMateAdminPage } from "./pages/WorkMateAdmin";
 
 const AuthPage = lazy(() =>
   import("./pages/Auth").then((module) => ({ default: module.AuthPage })),
@@ -16,7 +16,14 @@ const WelcomePage = lazy(() =>
 );
 
 export function App() {
-  if (new URLSearchParams(window.location.search).has("handoff") || sessionStorage.getItem("workmate-rakazo-admin-door")) return <WorkMateAdminPage />;
+  if (saveWorkMateAssertionFromLocation()) {
+    return <Routes>
+      <Route path="/" element={<ShellPage />} />
+      <Route path="/app" element={<ShellPage />} />
+      <Route path="/app/:botId" element={<ShellPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>;
+  }
   const session = authClient.useSession();
   useLayoutEffect(() => {
     if (session.isPending) return;

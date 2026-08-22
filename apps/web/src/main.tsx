@@ -15,10 +15,14 @@ function PerformanceProbe() {
   return null;
 }
 
+const basename = window.location.pathname.startsWith("/saas-admin/rakazo")
+  ? "/saas-admin/rakazo"
+  : undefined;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PerformanceProbe />
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <App />
     </BrowserRouter>
   </StrictMode>,
