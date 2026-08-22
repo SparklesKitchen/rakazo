@@ -1,0 +1,15 @@
+# WorkMate-owned Rakazo only. This is included inside the authenticated
+# app.workmateos.co.uk site block; it never creates a standalone host.
+handle /saas-admin/rakazo/rpc* {
+  uri strip_prefix /saas-admin/rakazo
+  reverse_proxy 127.0.0.1:3110
+}
+
+handle_path /saas-admin/rakazo/api/* {
+  rewrite /api{uri}
+  reverse_proxy 127.0.0.1:3110
+}
+
+handle /saas-admin/rakazo/* {
+  reverse_proxy 127.0.0.1:5174
+}
