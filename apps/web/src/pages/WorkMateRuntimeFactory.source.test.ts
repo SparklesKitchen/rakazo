@@ -10,6 +10,7 @@ describe("WorkMate Rakazo application contract", () => {
   it("opens the existing Rakazo Shell rather than a custom WorkMate runtime editor", () => {
     expect(appSource).toContain("<ShellPage />");
     expect(appSource).not.toContain("WorkMateAdminPage");
+    expect(appSource).toContain("/api/admin/rakazo/launch");
   });
 
   it("uses the short-lived WorkMate handoff only as Rakazo RPC authentication", () => {

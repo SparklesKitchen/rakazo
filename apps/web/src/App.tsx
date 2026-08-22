@@ -24,6 +24,14 @@ export function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>;
   }
+  // The first broken Rakazo rollout stored only a tenant marker. Do not leave
+  // an authenticated SaaS Admin user at a dead standalone-login screen: get a
+  // fresh, server-issued handoff and enter the real Rakazo application.
+  if (sessionStorage.getItem("workmate-rakazo-admin-door")) {
+    sessionStorage.removeItem("workmate-rakazo-admin-door");
+    window.location.replace("/api/admin/rakazo/launch");
+    return null;
+  }
   const session = authClient.useSession();
   useLayoutEffect(() => {
     if (session.isPending) return;
