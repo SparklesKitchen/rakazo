@@ -12,7 +12,7 @@ type RuntimeAgent = {
 const handoffStorageKey = "workmate-rakazo-admin-door";
 const permissionModes = ["ask-every-time", "draft-for-review", "auto-run-within-approved-boundaries", "auto-run-except-sensitive", "never-do-this-action"];
 
-function tenantFromHandoff(handoff: string) {
+export function tenantFromHandoff(handoff: string) {
   try { return JSON.parse(atob((handoff.split(".")[0] ?? "").replace(/-/g, "+").replace(/_/g, "/"))).tenantId as string; }
   catch { return ""; }
 }
