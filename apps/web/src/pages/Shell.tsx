@@ -1138,19 +1138,17 @@ export function ShellPage() {
         <div className="relative">
           {menuOpen ? (
             <div className="absolute bottom-14 left-3 right-3 rounded-2xl border border-[#2A2A2F] bg-[#1A1A1D] p-2 shadow-[0_22px_50px_rgba(0,0,0,.55)]">
-              {!workMateEmbedded ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setModelsOpen(true);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-[11px] px-3 py-2.5 hover:bg-[#232327]"
-                >
-                  <Cpu size={16} strokeWidth={1.7} className="text-[#9A9AA0]" />
-                  <span className="flex-1 text-left text-[14.5px] text-[#ECECEE]">Models</span>
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setModelsOpen(true);
+                }}
+                className="flex w-full items-center gap-3 rounded-[11px] px-3 py-2.5 hover:bg-[#232327]"
+              >
+                <Cpu size={16} strokeWidth={1.7} className="text-[#9A9AA0]" />
+                <span className="flex-1 text-left text-[14.5px] text-[#ECECEE]">Models</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -1735,7 +1733,7 @@ export function ShellPage() {
       </Suspense>
 
       <Suspense fallback={null}>
-        {!workMateEmbedded && modelsOpen ? <ModelSettingsOverlay onClose={() => setModelsOpen(false)} /> : null}
+        {modelsOpen ? <ModelSettingsOverlay onClose={() => setModelsOpen(false)} /> : null}
         {workMateModelBot ? <WorkMateModelRouteOverlay bot={workMateModelBot} onClose={() => setWorkMateModelBot(null)} /> : null}
         {voiceOpen ? (
           <VoiceSettingsOverlay

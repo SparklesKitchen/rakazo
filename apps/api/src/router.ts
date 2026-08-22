@@ -1735,9 +1735,9 @@ export function createRouter(deps: RouterDeps) {
 }
 
 function rejectWorkMateManagedCredentials(deps: RouterDeps) {
-  if (!deps.env.workmateManaged) return;
+  if (!deps.env.workmateManaged || deps.env.composioAuthoringEnabled) return;
   throw new ORPCError("FORBIDDEN", {
-    message: "Model credentials are managed by WorkMate Router in this deployment.",
+    message: "Model credentials are managed by WorkMate Router outside SaaS Admin authoring mode.",
   });
 }
 
