@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { authClient } from "./lib/auth";
 import { markAfterPaint, markOnce } from "./lib/performance";
 import { ShellPage } from "./pages/Shell";
+import { WorkMateAdminPage } from "./pages/WorkMateAdmin";
 
 const AuthPage = lazy(() =>
   import("./pages/Auth").then((module) => ({ default: module.AuthPage })),
@@ -15,6 +16,7 @@ const WelcomePage = lazy(() =>
 );
 
 export function App() {
+  if (new URLSearchParams(window.location.search).has("handoff")) return <WorkMateAdminPage />;
   const session = authClient.useSession();
   useLayoutEffect(() => {
     if (session.isPending) return;

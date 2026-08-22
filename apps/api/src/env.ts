@@ -1,6 +1,11 @@
 import { resolveAuthSecret, resolveEncryptionKey, resolveSupervisorToken } from "@rakazo/core";
 
+export type IntegrationMode = "upstream" | "workmate";
+
 export interface AppEnv {
+  integrationMode: IntegrationMode;
+  workmateAssertionSecret: string | undefined;
+  workmateRakazoDatabaseUrl: string | undefined;
   databaseUrl: string;
   realtimeDatabaseUrl: string;
   authSecret: string;
@@ -31,8 +36,17 @@ export interface AppEnv {
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
-  const authSecret = resolveAuthSecret(source);
+  const integrationMode = integrationModeFrom(source);
+  const workmateAssertionSecret = source.WORKMATE_RAKAZO_ASSERTION_SECRET;
+  if (integrationMode === "workmate") assertWorkMateProductionBoundary(source, workmateAssertionSecret);
+  const authSecret =
+    integrationMode === "workmate"
+      ? workmateAssertionSecret!
+      : resolveAuthSecret(source);
   return {
+    integrationMode,
+    workmateAssertionSecret,
+    workmateRakazoDatabaseUrl: source.WORKMATE_RAKAZO_DATABASE_URL,
     databaseUrl: required(source, "DATABASE_URL"),
     realtimeDatabaseUrl: source.REALTIME_DATABASE_URL ?? required(source, "DATABASE_URL"),
     authSecret,
@@ -41,10 +55,14 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     apiUrl: source.API_URL ?? "http://127.0.0.1:3100",
     signupsEnabled: source.SIGNUPS_ENABLED,
     signupAllowlist: source.SIGNUP_ALLOWLIST,
-    encryptionKey: resolveEncryptionKey(source),
+    encryptionKey:
+      integrationMode === "workmate" ? workmateAssertionSecret! : resolveEncryptionKey(source),
     dataDir: source.DATA_DIR ?? "./data",
     sandboxSupervisorUrl: source.SANDBOX_SUPERVISOR_URL ?? "http://127.0.0.1:7091",
-    sandboxSupervisorToken: resolveSupervisorToken(source),
+    sandboxSupervisorToken:
+      integrationMode === "workmate"
+        ? source.SANDBOX_SUPERVISOR_TOKEN ?? workmateAssertionSecret!
+        : resolveSupervisorToken(source),
     sandboxProvider: source.SANDBOX_PROVIDER ?? "docker",
     agentRuntime: source.AGENT_RUNTIME ?? "pi",
     openRouterKey: source.OPENROUTER_API_KEY,
@@ -62,6 +80,32 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     gitSha: optional(source.GIT_SHA) ?? optional(source.RAKAZO_GIT_SHA),
   };
 }
+
+function integrationModeFrom(source: NodeJS.ProcessEnv): IntegrationMode {
+  const value = source.RAKAZO_INTEGRATION_MODE ?? "upstream";
+  if (value === "upstream" || value === "workmate") return value;
+  throw new Error("RAKAZO_INTEGRATION_MODE must be upstream or workmate");
+}
+
+function assertWorkMateProductionBoundary(source: NodeJS.ProcessEnv, assertionSecret: string | undefined): void {
+  if (source.NODE_ENV !== "production") {
+    throw new Error("RAKAZO_INTEGRATION_MODE=workmate is production-only");
+  }
+  if (!assertionSecret || assertionSecret.length < 12) throw new Error("WORKMATE_RAKAZO_ASSERTION_SECRET is required in WorkMate production mode");
+  if (!source.WORKMATE_RAKAZO_DATABASE_URL) throw new Error("WORKMATE_RAKAZO_DATABASE_URL is required in WorkMate production mode");
+  const forbidden = [
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "OPENROUTER_API_KEY",
+    "COMPOSIO_API_KEY",
+    "PI_DEFAULT_PROVIDER",
+    "PI_DEFAULT_MODEL",
+  ].filter((key) => source[key]?.trim());
+  if (forbidden.length) {
+    throw new Error(`WorkMate production mode rejects independent authority or provider credentials: ${forbidden.join(", ")}`);
+  }
+}
+
 
 function required(source: NodeJS.ProcessEnv, key: string): string {
   const value = source[key];

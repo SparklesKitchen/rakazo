@@ -251,6 +251,12 @@ export interface AgentRunRequest {
     provider: string;
     id: string;
     apiKey?: string;
+    /**
+     * Short-lived assertion minted by WorkMate for this exact runtime call.
+     * It is opaque to adapters and must never be persisted or returned to a
+     * client. WorkMate production runtimes send it only to WorkMate Router.
+     */
+    workmateAssertion?: string;
     /** In-process OAuth credential from the encrypted store for this run. */
     oauth?: {
       credential: AgentModelOAuthCredential;

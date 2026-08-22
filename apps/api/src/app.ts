@@ -24,7 +24,7 @@ import {
   pushTokenPath,
   ScriptedAgentRuntime,
 } from "@rakazo/adapters";
-import { blockedAuthPaths, createAuth } from "@rakazo/auth";
+import { blockedAuthPaths, createAuth, verifyWorkMateAssertion } from "@rakazo/auth";
 import { createDb, createThreadEvents, type PrismaClient, requireMembership } from "@rakazo/db";
 import { MarkdownMemoryStore } from "@rakazo/memory";
 import { Hono } from "hono";
@@ -98,14 +98,19 @@ export async function createApp(
   const home = new LocalAgentHomeStore(env.dataDir);
   const artifacts = new LocalArtifactStore(env.dataDir);
   const memory = new MarkdownMemoryStore(prisma);
-  const stack = createConnectorStack(isComposioEnabled(env.composioApiKey), composioOverride);
+  const stack = createConnectorStack(
+    env.integrationMode === "workmate" ? false : isComposioEnabled(env.composioApiKey),
+    composioOverride,
+  );
   const connector = stack.destination;
   await connector.start();
   void stack.composio?.warmDirectory().catch(() => undefined);
   const runtime =
-    env.agentRuntime === "scripted" ? new ScriptedAgentRuntime() : new PiAgentRuntime();
+    env.agentRuntime === "scripted"
+      ? new ScriptedAgentRuntime()
+      : new PiAgentRuntime({ workmateProduction: env.integrationMode === "workmate" });
   const notifications = new ExpoPushProvider(env.dataDir);
-  const auth = createAuth(prisma, {
+  const auth = env.integrationMode === "workmate" ? null : createAuth(prisma, {
     secret: env.authSecret,
     baseURL: env.authUrl,
     webOrigin: env.webOrigin,
@@ -154,9 +159,9 @@ export async function createApp(
     artifacts,
     connector: stack.connector,
     listConnectedPluginSlugs: stack.composio?.listConnectedSlugs.bind(stack.composio),
-    secrets: [env.openRouterKey ?? "", env.composioApiKey ?? ""].filter(Boolean),
-    secretStore: secrets,
-    deploymentModelKey: env.openRouterKey,
+    secrets: env.integrationMode === "workmate" ? [] : [env.openRouterKey ?? "", env.composioApiKey ?? ""].filter(Boolean),
+    secretStore: env.integrationMode === "workmate" ? undefined : secrets,
+    deploymentModelKey: env.integrationMode === "workmate" ? undefined : env.openRouterKey,
     dataDir: env.dataDir,
     notifications,
     jobs,
@@ -172,7 +177,7 @@ export async function createApp(
     events,
     workerId: "api",
     runtime,
-    deploymentModelKey: env.openRouterKey,
+    deploymentModelKey: env.integrationMode === "workmate" ? undefined : env.openRouterKey,
   });
   if (inMemoryJobs) {
     await inMemoryJobs.start(jobHandlers);
@@ -183,7 +188,6 @@ export async function createApp(
   const router = createRouter({
     prisma,
     events,
-    auth,
     jobs,
     sandbox,
     memory,
@@ -196,14 +200,23 @@ export async function createApp(
     env: {
       defaultProvider: env.defaultProvider,
       defaultModel: env.defaultModel,
-      openRouterKey: env.openRouterKey,
+      openRouterKey: env.integrationMode === "workmate" ? undefined : env.openRouterKey,
       webOrigin: env.webOrigin,
       screenProxySecret: env.authSecret,
       sandboxProvider: env.sandboxProvider,
+      workmateManaged: env.integrationMode === "workmate",
     },
   });
   const rpc = new RPCHandler(router);
   const app = new Hono();
+  if (env.integrationMode === "workmate") {
+    app.get("/api/workmate/admin/catalogue", (c) => {
+      const assertion = c.req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+      const claims = verifyWorkMateAssertion(assertion, env.workmateAssertionSecret!);
+      if (!claims || claims.kind !== "admin-door") return c.json({ ok: false, error: "WorkMate SaaS Admin assertion required" }, 401);
+      return c.json({ ok: true, tenantId: claims.tenantId, agents: WORKMATE_SPECIALIST_CATALOGUE });
+    });
+  }
   app.use(
     "*",
     cors({
@@ -215,6 +228,7 @@ export async function createApp(
     }),
   );
   app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+    if (!auth) return c.json({ error: "WorkMate assertion required" }, 404);
     const path = new URL(c.req.url).pathname.replace("/api/auth", "");
     if (blockedAuthPaths.some((blocked) => path.startsWith(blocked))) {
       return c.json({ error: "Not available in version 1" }, 404);
@@ -222,10 +236,9 @@ export async function createApp(
     return auth.handler(c.req.raw);
   });
   app.use("/rpc/*", async (c, next) => {
-    const session = await auth.api.getSession({ headers: sessionHeaders(c.req.raw) });
-    const actor = session?.user
-      ? await requireMembership(prisma, session.user.id).catch(() => null)
-      : null;
+    const actor = auth
+      ? await betterAuthActor(auth, prisma, c.req.raw)
+      : workmateActor(c.req.raw, env.workmateAssertionSecret!);
     const { matched, response } = await rpc.handle(c.req.raw, {
       prefix: "/rpc",
       context: { actor, signal: c.req.raw.signal },
@@ -234,6 +247,7 @@ export async function createApp(
     await next();
   });
   mountVoiceHttpRoutes(app, { prisma, secrets }, async (c) => {
+    if (!auth) return null;
     const session = await auth.api.getSession({ headers: sessionHeaders(c.req.raw) });
     if (!session?.user) return null;
     return requireMembership(prisma, session.user.id).catch(() => null);
@@ -268,6 +282,33 @@ export async function createApp(
       await created.pool?.end().catch(() => undefined);
     },
   };
+}
+
+const WORKMATE_SPECIALIST_CATALOGUE = [
+  ["dispatcher", "Dispatcher", "Routing"], ["innie-inbox", "Innie Inbox", "Inbox"], ["social-sal", "Social Sal", "Social"],
+  ["copy-carl", "Copy Carl", "Writing"], ["chase-charlie", "Chase Charlie", "Chief of Staff"], ["doc-dot", "Doc Dot", "Documents"],
+  ["audrey-accounts", "Audrey Accounts", "Finance"], ["sage-seo", "Sage SEO", "SEO"], ["studio-lite", "Studio Stella", "Studio"],
+  ["studio-scriptwriter", "Studio Scriptwriter", "Scriptwriting"], ["ranky-riley", "Ranky Riley", "Rank Tracking"], ["piper-producer", "Piper Producer", "Production"],
+  ["echo-voice", "Echo Voice", "Voice"], ["quinn-admin", "Quinn Admin", "Operations"], ["marky-marketing", "Marky Marketing", "Marketing"],
+  ["selly-sales", "Selly Sales", "Sales"], ["bucky-builder", "Bucky Builder", "Builder"], ["graph-report", "Graph Report", "Reporting"],
+  ["avery-web", "Avery Web", "Web"], ["mira-creative", "Mira Creative", "Creative"], ["muse-design", "Muse Design", "Design"],
+  ["privy-personal", "Privy Personal", "Personal"], ["elanor-legal", "Elanor Legal", "Legal"], ["runtime-factory", "Runtime Factory", "SaaS Admin"],
+].map(([slug, name, capability]) => ({ slug, name, capability }));
+
+async function betterAuthActor(auth: NonNullable<ReturnType<typeof createAuth>>, prisma: PrismaClient, request: Request) {
+  const session = await auth.api.getSession({ headers: sessionHeaders(request) });
+  return session?.user ? requireMembership(prisma, session.user.id).catch(() => null) : null;
+}
+
+function workmateActor(request: Request, assertionSecret: string) {
+  const header = request.headers.get("authorization");
+  const assertion = header?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const claims = verifyWorkMateAssertion(assertion, assertionSecret);
+  // The SaaS Admin handoff has tenant scope only. Existing Rakazo RPCs are
+  // workspace-scoped, so they must remain unavailable until a separate,
+  // scope-complete WorkMate contract is introduced.
+  if (!claims || claims.kind !== "admin-door") return null;
+  return null;
 }
 
 function isTrustedOrigin(origin: string, env: AppEnv) {

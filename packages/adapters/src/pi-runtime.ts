@@ -21,7 +21,28 @@ const AGENT_TOOL_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 const MAX_AGENT_TOOL_NAME_LENGTH = 64;
 const FALLBACK_AGENT_TOOL_NAME = "connector_tool";
 
+export type WorkMateRouterGatewayOptions = {
+  /** Operator-configured, internal WorkMate Router execution endpoint. */
+  executionUrl?: string;
+  /** Injectable transport for deterministic tests; defaults to global fetch. */
+  fetch?: typeof globalThis.fetch;
+};
+
+type WorkMateRouterGatewayResponse = {
+  ok: true;
+  text: string;
+  telemetry: {
+    runId: string;
+    traceId: string;
+    modelRouteId: string;
+  };
+};
+
 export class PiAgentRuntime implements AgentRuntime {
+  constructor(private readonly options: {
+    workmateProduction?: boolean;
+    workmateRouter?: WorkMateRouterGatewayOptions;
+  } = {}) {}
   describe() {
     return {
       id: "pi",
@@ -43,6 +64,25 @@ export class PiAgentRuntime implements AgentRuntime {
 
     const work = (async () => {
       try {
+        if (this.options.workmateProduction && (request.model.apiKey || request.model.oauth || process.env.OPENROUTER_API_KEY)) {
+          queue.push({ type: "text", text: "WorkMate Router credentials are required for production model runs." });
+          queue.push({ type: "done" });
+          return;
+        }
+        if (this.options.workmateProduction) {
+          queue.push({ type: "progress", text: "routing through WorkMate Router…" });
+          const routed = await executeWorkMateRouter(request, context, this.options.workmateRouter);
+          queue.push({ type: "text", text: routed.text });
+          queue.push({
+            type: "usage",
+            inputTokens: 0,
+            outputTokens: 0,
+            provider: "workmate-router",
+            model: routed.telemetry.modelRouteId,
+          });
+          queue.push({ type: "done", text: routed.text });
+          return;
+        }
         const provider =
           request.model.provider === "scripted" ? "openrouter" : request.model.provider;
         const modelId =
@@ -171,6 +211,82 @@ export class PiAgentRuntime implements AgentRuntime {
       running.delete(request.runId);
     }
   }
+}
+
+/**
+ * Production WorkMate mode is deliberately non-streaming at this boundary.
+ * Pi never sees a provider credential or chooses a provider/model: it sends
+ * the task envelope to the configured internal gateway and accepts only a
+ * response that proves it belongs to this exact Rakazo run and trace.
+ */
+async function executeWorkMateRouter(
+  request: AgentRunRequest,
+  context: AdapterContext,
+  options: WorkMateRouterGatewayOptions | undefined,
+): Promise<WorkMateRouterGatewayResponse> {
+  const assertion = request.model.workmateAssertion?.trim();
+  if (!assertion) throw new Error("WorkMate Router assertion is required for production model runs.");
+  const configuredUrl = options?.executionUrl ?? process.env.WORKMATE_ROUTER_EXECUTION_URL;
+  if (!configuredUrl?.trim()) throw new Error("WorkMate Router execution endpoint is required for production model runs.");
+  let endpoint: URL;
+  try {
+    endpoint = new URL(configuredUrl);
+  } catch {
+    throw new Error("WorkMate Router execution endpoint is invalid.");
+  }
+  if (endpoint.protocol !== "http:" && endpoint.protocol !== "https:") {
+    throw new Error("WorkMate Router execution endpoint is invalid.");
+  }
+  const transport = options?.fetch ?? globalThis.fetch;
+  let response: Response;
+  try {
+    response = await transport(endpoint, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${assertion}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        runId: request.runId,
+        operationId: context.operationId,
+        traceId: context.traceId,
+        botId: request.botId,
+        threadId: request.threadId,
+        workspaceId: context.workspaceId,
+        prompt: request.prompt,
+        instructions: request.instructions,
+        history: request.history,
+      }),
+      signal: context.signal,
+    });
+  } catch {
+    throw new Error("WorkMate Router execution is unavailable.");
+  }
+  if (!response.ok) throw new Error("WorkMate Router rejected this production model run.");
+  const payload = await response.json().catch(() => null);
+  const output = parseWorkMateRouterResponse(payload, request.runId, context.traceId);
+  if (!output) throw new Error("WorkMate Router returned invalid production model output.");
+  return output;
+}
+
+function parseWorkMateRouterResponse(
+  value: unknown,
+  runId: string,
+  traceId: string,
+): WorkMateRouterGatewayResponse | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const response = value as Record<string, unknown>;
+  const telemetry = response.telemetry;
+  if (response.ok !== true || typeof response.text !== "string" || !response.text.trim()
+    || !telemetry || typeof telemetry !== "object" || Array.isArray(telemetry)) return null;
+  const details = telemetry as Record<string, unknown>;
+  if (details.runId !== runId || details.traceId !== traceId
+    || typeof details.modelRouteId !== "string" || !details.modelRouteId.trim()) return null;
+  return {
+    ok: true,
+    text: response.text,
+    telemetry: { runId, traceId, modelRouteId: details.modelRouteId.trim() },
+  };
 }
 
 function modelsForRequest(request: AgentRunRequest, provider: string): Models {

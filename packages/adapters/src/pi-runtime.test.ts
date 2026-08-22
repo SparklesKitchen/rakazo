@@ -33,6 +33,107 @@ describe("Pi agent runtime", () => {
     }
     expect(events.join(" ")).toMatch(/Unknown model/i);
   });
+
+  it("refuses direct provider credentials in WorkMate production mode", async () => {
+    const runtime = new PiAgentRuntime({ workmateProduction: true });
+    const events: string[] = [];
+    for await (const event of runtime.run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "r",
+        prompt: "hi",
+        instructions: "test",
+        history: [],
+        tools: [],
+        model: { provider: "openrouter", id: "any", apiKey: "not-allowed" },
+      },
+      {
+        operationId: "1",
+        traceId: "1",
+        workspaceId: "w",
+        userId: "u",
+        signal: new AbortController().signal,
+      },
+    )) {
+      if (event.type === "text") events.push(event.text);
+    }
+    expect(events.join(" ")).toMatch(/WorkMate Router credentials are required/i);
+  });
+
+  it("sends production work only through the correlated WorkMate Router gateway", async () => {
+    const gateway = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        authorization: "Bearer short-lived-workmate-assertion",
+        "content-type": "application/json",
+      });
+      expect(JSON.parse(String(init?.body))).toEqual(expect.objectContaining({
+        runId: "r",
+        operationId: "1",
+        traceId: "1",
+        workspaceId: "w",
+        prompt: "hi",
+      }));
+      return Response.json({
+        ok: true,
+        text: "Router-composed admin response",
+        telemetry: { runId: "r", traceId: "1", modelRouteId: "rakazo-admin" },
+      });
+    });
+    const runtime = new PiAgentRuntime({
+      workmateProduction: true,
+      workmateRouter: { executionUrl: "http://workmate-router.internal/execute", fetch: gateway as typeof fetch },
+    });
+    const events: Array<{ type: string; text?: string; provider?: string; model?: string }> = [];
+    for await (const event of runtime.run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "r",
+        prompt: "hi",
+        instructions: "Rakazo admin runtime",
+        history: [],
+        tools: [],
+        model: { provider: "must-not-be-used", id: "must-not-be-used", workmateAssertion: "short-lived-workmate-assertion" },
+      },
+      { operationId: "1", traceId: "1", workspaceId: "w", userId: "u", signal: new AbortController().signal },
+    )) events.push(event);
+    expect(gateway).toHaveBeenCalledOnce();
+    expect(events.filter((event) => event.type === "text").map((event) => event.text)).toEqual(["Router-composed admin response"]);
+    expect(events.find((event) => event.type === "usage")).toMatchObject({ provider: "workmate-router", model: "rakazo-admin" });
+  });
+
+  it("fails closed when gateway output is missing or not correlated to the Rakazo run", async () => {
+    const runtime = new PiAgentRuntime({
+      workmateProduction: true,
+      workmateRouter: {
+        executionUrl: "http://workmate-router.internal/execute",
+        fetch: (async () => Response.json({
+          ok: true,
+          text: "untrusted output",
+          telemetry: { runId: "another-run", traceId: "1", modelRouteId: "route" },
+        })) as typeof fetch,
+      },
+    });
+    const events: string[] = [];
+    for await (const event of runtime.run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "r",
+        prompt: "hi",
+        instructions: "Rakazo admin runtime",
+        history: [],
+        tools: [],
+        model: { provider: "must-not-be-used", id: "must-not-be-used", workmateAssertion: "short-lived-workmate-assertion" },
+      },
+      { operationId: "1", traceId: "1", workspaceId: "w", userId: "u", signal: new AbortController().signal },
+    )) {
+      if (event.type === "text") events.push(event.text);
+    }
+    expect(events.join(" ")).toMatch(/invalid production model output/i);
+    expect(events.join(" ")).not.toContain("untrusted output");
+  });
 });
 
 describe("Pi model-facing connector tool names", () => {

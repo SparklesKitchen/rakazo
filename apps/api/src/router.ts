@@ -46,7 +46,6 @@ import {
   toComputerRef,
   touchRunningComputer,
 } from "@rakazo/adapters";
-import type { Auth } from "@rakazo/auth";
 import {
   type Actor,
   appContract,
@@ -114,7 +113,6 @@ function computerContext(actor: Actor, botId: string, operationId: string): Adap
 export interface RouterDeps {
   prisma: PrismaClient;
   events: ThreadEvents;
-  auth: Auth;
   jobs: JobPublisher;
   sandbox: SandboxProvider;
   memory: MemoryStore;
@@ -131,6 +129,7 @@ export interface RouterDeps {
     webOrigin: string;
     screenProxySecret: string;
     sandboxProvider: string;
+    workmateManaged?: boolean;
   };
 }
 
@@ -218,6 +217,7 @@ export function createRouter(deps: RouterDeps) {
         }));
       }),
       connect: authed.models.connect.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         return persistModelCredential(deps, context.actor, {
           provider: input.provider,
           plaintext: input.apiKey,
@@ -227,6 +227,7 @@ export function createRouter(deps: RouterDeps) {
         });
       }),
       beginOAuth: authed.models.beginOAuth.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         return deps.oauthLogins.begin({
           userId: context.actor.userId,
           workspaceId: context.actor.workspaceId,
@@ -237,6 +238,7 @@ export function createRouter(deps: RouterDeps) {
         });
       }),
       completeOAuth: authed.models.completeOAuth.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         const result = await deps.oauthLogins.complete(input.loginId, {
           userId: context.actor.userId,
           workspaceId: context.actor.workspaceId,
@@ -244,6 +246,7 @@ export function createRouter(deps: RouterDeps) {
         return result.status === "connected" ? { status: "ready" as const } : result;
       }),
       finishOAuth: authed.models.finishOAuth.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         throwIfAborted(context.signal);
         const result = await deps.oauthLogins.finish(
           input.loginId,
@@ -267,10 +270,12 @@ export function createRouter(deps: RouterDeps) {
         return result.value;
       }),
       cancelOAuth: authed.models.cancelOAuth.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         await deps.oauthLogins.cancel(input.loginId, context.actor);
         return { ok: true as const };
       }),
       setDefault: authed.models.setDefault.handler(async ({ context, input }) => {
+        rejectWorkMateManagedCredentials(deps);
         await withSerializableRetry(() =>
           deps.prisma.$transaction(
             async (tx) => {
@@ -1408,6 +1413,7 @@ export function createRouter(deps: RouterDeps) {
         }));
       }),
       begin: authed.connections.begin.handler(async ({ context, input }) => {
+        rejectWorkMateManagedConnections(deps);
         const row = await deps.prisma.connection.create({
           data: {
             workspaceId: context.actor.workspaceId,
@@ -1449,6 +1455,7 @@ export function createRouter(deps: RouterDeps) {
         }
       }),
       complete: authed.connections.complete.handler(async ({ context, input }) => {
+        rejectWorkMateManagedConnections(deps);
         const existing = await deps.prisma.connection.findFirst({
           where: {
             id: input.connectionId,
@@ -1485,6 +1492,7 @@ export function createRouter(deps: RouterDeps) {
         };
       }),
       revoke: authed.connections.revoke.handler(async ({ context, input }) => {
+        rejectWorkMateManagedConnections(deps);
         const row = await deps.prisma.connection.findFirst({
           where: {
             id: input.connectionId,
@@ -1722,6 +1730,20 @@ export function createRouter(deps: RouterDeps) {
         prepareVoice(deps, context.actor, input),
       ),
     },
+  });
+}
+
+function rejectWorkMateManagedCredentials(deps: RouterDeps) {
+  if (!deps.env.workmateManaged) return;
+  throw new ORPCError("FORBIDDEN", {
+    message: "Model credentials are managed by WorkMate Router in this deployment.",
+  });
+}
+
+function rejectWorkMateManagedConnections(deps: RouterDeps) {
+  if (!deps.env.workmateManaged) return;
+  throw new ORPCError("FORBIDDEN", {
+    message: "Composio connections are managed by WorkMate in this deployment.",
   });
 }
 

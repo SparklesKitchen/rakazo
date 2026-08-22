@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { emailAllowed, parseAllowlist, signupsOpen } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
 import { betterAuth } from "better-auth";
@@ -14,6 +14,71 @@ export interface AuthEnv {
   signupAllowlist: string | undefined;
   extraOrigins?: string[];
   beforeDeleteUser?: (userId: string) => Promise<void>;
+}
+
+/**
+ * The assertion WorkMate OS gives a module after its own authenticated
+ * hand-off.  It is deliberately not a Rakazo session: Rakazo must validate
+ * it on every request and never mint or renew an equivalent credential.
+ */
+export interface WorkMateAssertionClaims {
+  iss: "workmate-os";
+  aud: "workmate-rakazo";
+  kind: "admin-door";
+  jti: string;
+  adminSessionId: string;
+  adminUserId: string;
+  adminEmail: string;
+  tenantId: string;
+  iat: number;
+  exp: number;
+}
+
+const MAX_WORKMATE_ASSERTION_TTL_SECONDS = 5 * 60;
+
+export function verifyWorkMateAssertion(
+  value: string | undefined,
+  secret: string,
+  now = Date.now(),
+): WorkMateAssertionClaims | null {
+  const [payload, signature, extra] = String(value ?? "").split(".");
+  if (!payload || !signature || extra) return null;
+  let claims: WorkMateAssertionClaims;
+  try {
+    claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as WorkMateAssertionClaims;
+  } catch {
+    return null;
+  }
+  if (!secret || !safeEqual(createHmac("sha256", secret).update(payload).digest("base64url"), signature)) {
+    return null;
+  }
+  const nowSeconds = Math.floor(now / 1000);
+  if (
+    claims.iss !== "workmate-os" ||
+    claims.aud !== "workmate-rakazo" ||
+    claims.kind !== "admin-door" ||
+    !nonEmpty(claims.jti) ||
+    !nonEmpty(claims.adminSessionId) ||
+    !nonEmpty(claims.adminUserId) ||
+    !nonEmpty(claims.adminEmail) ||
+    !nonEmpty(claims.tenantId) ||
+    !Number.isInteger(claims.iat) ||
+    !Number.isInteger(claims.exp) ||
+    claims.iat > nowSeconds ||
+    claims.exp <= nowSeconds ||
+    claims.exp - claims.iat > MAX_WORKMATE_ASSERTION_TTL_SECONDS
+  ) {
+    return null;
+  }
+  return claims;
+}
+
+function nonEmpty(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function safeEqual(left: string, right: string): boolean {
+  return left.length === right.length && timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }
 
 function newId(): string {

@@ -92,4 +92,18 @@ describe("loadEnv", () => {
     expect(loadEnv({ ...base, GIT_SHA: "  3c6e209  " }).gitSha).toBe("3c6e209");
     expect(loadEnv({ ...base, RAKAZO_GIT_SHA: "abc1234" }).gitSha).toBe("abc1234");
   });
+
+  it("requires WorkMate assertions and rejects independent auth, model, and Composio credentials in production mode", () => {
+    const workmate = {
+      DATABASE_URL: base.DATABASE_URL,
+      NODE_ENV: "production",
+      RAKAZO_INTEGRATION_MODE: "workmate",
+      WORKMATE_RAKAZO_ASSERTION_SECRET: "workmate-test-signing-secret",
+      WORKMATE_RAKAZO_DATABASE_URL: "postgres://rakazo:rakazo@127.0.0.1:5433/rakazo",
+    };
+    expect(loadEnv(workmate)).toMatchObject({ integrationMode: "workmate" });
+    expect(() => loadEnv({ ...workmate, BETTER_AUTH_SECRET: "independent-session-secret" })).toThrow(/rejects independent authority/i);
+    expect(() => loadEnv({ ...workmate, OPENROUTER_API_KEY: "provider-key" })).toThrow(/rejects independent authority/i);
+    expect(() => loadEnv({ ...workmate, COMPOSIO_API_KEY: "composio-key" })).toThrow(/rejects independent authority/i);
+  });
 });
