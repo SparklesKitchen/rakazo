@@ -212,14 +212,6 @@ export async function createApp(
   });
   const rpc = new RPCHandler(router);
   const app = new Hono();
-  if (env.integrationMode === "workmate") {
-    app.get("/api/workmate/admin/catalogue", (c) => {
-      const assertion = c.req.header("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-      const claims = verifyWorkMateAssertion(assertion, env.workmateAssertionSecret!);
-      if (!claims || claims.kind !== "admin-door") return c.json({ ok: false, error: "WorkMate SaaS Admin assertion required" }, 401);
-      return c.json({ ok: true, tenantId: claims.tenantId, agents: WORKMATE_SPECIALIST_CATALOGUE });
-    });
-  }
   app.use(
     "*",
     cors({
@@ -294,19 +286,8 @@ function unavailableE2bSandbox(): SandboxProvider {
       if (property === "describe") return target.describe;
       return fail;
     },
-  }) as SandboxProvider;
+  }) as unknown as SandboxProvider;
 }
-
-const WORKMATE_SPECIALIST_CATALOGUE = [
-  ["dispatcher", "Dispatcher", "Routing"], ["innie-inbox", "Innie Inbox", "Inbox"], ["social-sal", "Social Sal", "Social"],
-  ["copy-carl", "Copy Carl", "Writing"], ["chase-charlie", "Chase Charlie", "Chief of Staff"], ["doc-dot", "Doc Dot", "Documents"],
-  ["audrey-accounts", "Audrey Accounts", "Finance"], ["sage-seo", "Sage SEO", "SEO"], ["studio-lite", "Studio Stella", "Studio"],
-  ["studio-scriptwriter", "Studio Scriptwriter", "Scriptwriting"], ["ranky-riley", "Ranky Riley", "Rank Tracking"], ["piper-producer", "Piper Producer", "Production"],
-  ["echo-voice", "Echo Voice", "Voice"], ["quinn-admin", "Quinn Admin", "Operations"], ["marky-marketing", "Marky Marketing", "Marketing"],
-  ["selly-sales", "Selly Sales", "Sales"], ["bucky-builder", "Bucky Builder", "Builder"], ["graph-report", "Graph Report", "Reporting"],
-  ["avery-web", "Avery Web", "Web"], ["mira-creative", "Mira Creative", "Creative"], ["muse-design", "Muse Design", "Design"],
-  ["privy-personal", "Privy Personal", "Personal"], ["elanor-legal", "Elanor Legal", "Legal"], ["runtime-factory", "Runtime Factory", "SaaS Admin"],
-].map(([slug, name, capability]) => ({ slug, name, capability }));
 
 async function betterAuthActor(auth: NonNullable<ReturnType<typeof createAuth>>, prisma: PrismaClient, request: Request) {
   const session = await auth.api.getSession({ headers: sessionHeaders(request) });
