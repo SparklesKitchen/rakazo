@@ -23,5 +23,6 @@ describe("WorkMate Rakazo application contract", () => {
   it("keeps WorkMate model routing as a per-agent Rakazo sub-item", () => {
     expect(shellSource).toContain("WorkMateModelRouteOverlay");
     expect(menuSource).toContain("WorkMate model route");
+    expect(shellSource).toContain("!workMateEmbedded && modelsOpen");
   });
 });
