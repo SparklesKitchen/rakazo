@@ -16,7 +16,7 @@ const WelcomePage = lazy(() =>
 );
 
 export function App() {
-  if (new URLSearchParams(window.location.search).has("handoff")) return <WorkMateAdminPage />;
+  if (new URLSearchParams(window.location.search).has("handoff") || sessionStorage.getItem("workmate-rakazo-admin-door")) return <WorkMateAdminPage />;
   const session = authClient.useSession();
   useLayoutEffect(() => {
     if (session.isPending) return;

@@ -9,14 +9,16 @@ const source = readFileSync(
 
 describe("WorkMate Rakazo runtime factory contract", () => {
   it("loads the actual preset WorkMate runtime rather than a fabricated catalogue", () => {
-    expect(source).toContain("/api/workmate/customer-agents/runtime");
+    expect(source).toContain("/api/admin/rakazo/runtime");
     expect(source).not.toContain("type Agent =");
     expect(source).not.toContain("admin/catalogue");
   });
 
-  it("opens a selected agent's live runtime controls and saves the model configuration", () => {
+  it("opens a selected agent's live runtime controls and saves its model and tool permissions", () => {
     expect(source).toContain("selectedAgent");
-    expect(source).toContain("/api/admin/customer-agents/runtime/${selectedAgent.agent.slug}/model");
+    expect(source).toContain("/api/admin/rakazo/runtime/${selectedAgent.agent.slug}/model");
+    expect(source).toContain("/api/admin/rakazo/runtime/${selectedAgent.agent.slug}/tools/${tool.toolId}");
+    expect(source).toContain("Permission mode");
     expect(source).toContain("Save runtime");
   });
 });
