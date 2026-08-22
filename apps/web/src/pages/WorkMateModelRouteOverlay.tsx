@@ -17,7 +17,9 @@ export function WorkMateModelRouteOverlay({ bot, onClose }: { bot: Bot; onClose:
 
   useEffect(() => {
     if (!slug) return void setError("This Rakazo bot has no WorkMate runtime binding.");
-    void fetch(`/api/admin/rakazo/runtime?tenantId=${encodeURIComponent(bot.workspaceId)}`, { credentials: "include" })
+    // WorkMate derives tenant and workspace from the authenticated SaaS Admin
+    // session. A Rakazo workspace ID is never a tenant ID.
+    void fetch("/api/admin/rakazo/runtime", { credentials: "include" })
       .then(async (response) => ({ response, body: await response.json() }))
       .then(({ response, body }) => {
         const agent = (body?.agents as RuntimeAgent[] | undefined)?.find((item) => item.agent.slug === slug);
@@ -33,7 +35,7 @@ export function WorkMateModelRouteOverlay({ bot, onClose }: { bot: Bot; onClose:
     try {
       const response = await fetch(`/api/admin/rakazo/runtime/${slug}/model`, {
         method: "PUT", credentials: "include", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tenantId: bot.workspaceId, modelConfig: config }),
+        body: JSON.stringify({ modelConfig: config }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.error ?? "Could not save WorkMate model route.");

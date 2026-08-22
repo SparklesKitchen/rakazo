@@ -6,6 +6,7 @@ const appSource = readFileSync(fileURLToPath(new URL("../App.tsx", import.meta.u
 const rpcSource = readFileSync(fileURLToPath(new URL("../lib/rpc.ts", import.meta.url)), "utf8");
 const handoffSource = readFileSync(fileURLToPath(new URL("../lib/workmate-handoff.ts", import.meta.url)), "utf8");
 const shellSource = readFileSync(fileURLToPath(new URL("./Shell.tsx", import.meta.url)), "utf8");
+const modelRouteSource = readFileSync(fileURLToPath(new URL("./WorkMateModelRouteOverlay.tsx", import.meta.url)), "utf8");
 const menuSource = readFileSync(fileURLToPath(new URL("./BotContextMenu.tsx", import.meta.url)), "utf8");
 
 describe("WorkMate Rakazo application contract", () => {
@@ -24,6 +25,8 @@ describe("WorkMate Rakazo application contract", () => {
     expect(shellSource).toContain("WorkMateModelRouteOverlay");
     expect(menuSource).toContain("WorkMate model route");
     expect(shellSource).toContain("!workMateEmbedded && modelsOpen");
+    expect(modelRouteSource).toContain('fetch("/api/admin/rakazo/runtime"');
+    expect(modelRouteSource).not.toContain("tenantId: bot.workspaceId");
   });
 
   it("retains native per-agent instructions and taught-skill controls", () => {
