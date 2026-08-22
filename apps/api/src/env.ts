@@ -1,6 +1,7 @@
 import { resolveAuthSecret, resolveEncryptionKey, resolveSupervisorToken } from "@rakazo/core";
 
 export type IntegrationMode = "upstream" | "workmate";
+export type WorkMateComposioMode = "disabled" | "authoring";
 
 export interface AppEnv {
   integrationMode: IntegrationMode;
@@ -28,6 +29,7 @@ export interface AppEnv {
   boxApiKey: string | undefined;
   boxApiUrl: string | undefined;
   composioApiKey: string | undefined;
+  workmateComposioMode: WorkMateComposioMode;
   defaultProvider: string;
   defaultModel: string;
   wakeupDriver: string;
@@ -37,8 +39,9 @@ export interface AppEnv {
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   const integrationMode = integrationModeFrom(source);
+  const workmateComposioMode = workmateComposioModeFrom(source);
   const workmateAssertionSecret = source.WORKMATE_RAKAZO_ASSERTION_SECRET;
-  if (integrationMode === "workmate") assertWorkMateProductionBoundary(source, workmateAssertionSecret);
+  if (integrationMode === "workmate") assertWorkMateProductionBoundary(source, workmateAssertionSecret, workmateComposioMode);
   const authSecret =
     integrationMode === "workmate"
       ? workmateAssertionSecret!
@@ -73,6 +76,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     boxApiKey: source.BOX_API_KEY,
     boxApiUrl: source.BOX_API_URL ?? source.BOX_BASE_URL,
     composioApiKey: source.COMPOSIO_API_KEY,
+    workmateComposioMode,
     defaultProvider: source.PI_DEFAULT_PROVIDER ?? "openrouter",
     defaultModel: source.PI_DEFAULT_MODEL ?? "deepseek/deepseek-v4-flash-0731",
     wakeupDriver: source.WAKEUP_DRIVER ?? "graphile",
@@ -81,23 +85,31 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   };
 }
 
+function workmateComposioModeFrom(source: NodeJS.ProcessEnv): WorkMateComposioMode {
+  const value = String(source.WORKMATE_RAKAZO_COMPOSIO_MODE ?? "disabled").trim();
+  if (value === "disabled" || value === "authoring") return value;
+  throw new Error("WORKMATE_RAKAZO_COMPOSIO_MODE must be disabled or authoring");
+}
+
 function integrationModeFrom(source: NodeJS.ProcessEnv): IntegrationMode {
   const value = source.RAKAZO_INTEGRATION_MODE ?? "upstream";
   if (value === "upstream" || value === "workmate") return value;
   throw new Error("RAKAZO_INTEGRATION_MODE must be upstream or workmate");
 }
 
-function assertWorkMateProductionBoundary(source: NodeJS.ProcessEnv, assertionSecret: string | undefined): void {
+function assertWorkMateProductionBoundary(source: NodeJS.ProcessEnv, assertionSecret: string | undefined, composioMode: WorkMateComposioMode): void {
   if (source.NODE_ENV !== "production") {
     throw new Error("RAKAZO_INTEGRATION_MODE=workmate is production-only");
   }
   if (!assertionSecret || assertionSecret.length < 12) throw new Error("WORKMATE_RAKAZO_ASSERTION_SECRET is required in WorkMate production mode");
   if (!source.WORKMATE_RAKAZO_DATABASE_URL) throw new Error("WORKMATE_RAKAZO_DATABASE_URL is required in WorkMate production mode");
+  if (source.COMPOSIO_API_KEY?.trim() && composioMode !== "authoring") {
+    throw new Error("WorkMate production mode permits COMPOSIO_API_KEY only with WORKMATE_RAKAZO_COMPOSIO_MODE=authoring");
+  }
   const forbidden = [
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "OPENROUTER_API_KEY",
-    "COMPOSIO_API_KEY",
     "PI_DEFAULT_PROVIDER",
     "PI_DEFAULT_MODEL",
   ].filter((key) => source[key]?.trim());

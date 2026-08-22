@@ -103,7 +103,8 @@ export function PluginsOverlay({ onClose }: { onClose: () => void }) {
       <div className="flex h-[760px] w-[1080px] max-w-full flex-col overflow-hidden rounded-[26px] border border-[#232326] bg-[#141416] shadow-[0_40px_90px_rgba(0,0,0,.55)]">
         <div className="flex items-start justify-between px-8 pt-7">
           <div>
-            <div className="text-2xl font-medium text-[#F1F1F2]">Plugins</div>
+            <div className="text-2xl font-medium text-[#F1F1F2]">SaaS Admin plugins</div>
+            <p className="mt-1 text-[13.5px] text-[#7A7A80]">These are your authoring/test connections. Customer runtimes use their own WorkMate connections after promotion.</p>
             {loading ? <p className="mt-1 text-[13.5px] text-[#7A7A80]">Loading catalog…</p> : null}
           </div>
           <button

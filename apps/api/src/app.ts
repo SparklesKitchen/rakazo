@@ -103,7 +103,9 @@ export async function createApp(
   const artifacts = new LocalArtifactStore(env.dataDir);
   const memory = new MarkdownMemoryStore(prisma);
   const stack = createConnectorStack(
-    env.integrationMode === "workmate" ? false : isComposioEnabled(env.composioApiKey),
+    env.integrationMode !== "workmate" || env.workmateComposioMode === "authoring"
+      ? isComposioEnabled(env.composioApiKey)
+      : false,
     composioOverride,
   );
   const connector = stack.destination;
@@ -209,6 +211,7 @@ export async function createApp(
       screenProxySecret: env.authSecret,
       sandboxProvider: env.sandboxProvider,
       workmateManaged: env.integrationMode === "workmate",
+      composioAuthoringEnabled: env.workmateComposioMode === "authoring",
     },
   });
   const rpc = new RPCHandler(router);

@@ -130,6 +130,7 @@ export interface RouterDeps {
     screenProxySecret: string;
     sandboxProvider: string;
     workmateManaged?: boolean;
+    composioAuthoringEnabled?: boolean;
   };
 }
 
@@ -1741,7 +1742,7 @@ function rejectWorkMateManagedCredentials(deps: RouterDeps) {
 }
 
 function rejectWorkMateManagedConnections(deps: RouterDeps) {
-  if (!deps.env.workmateManaged) return;
+  if (!deps.env.workmateManaged || deps.env.composioAuthoringEnabled) return;
   throw new ORPCError("FORBIDDEN", {
     message: "Composio connections are managed by WorkMate in this deployment.",
   });

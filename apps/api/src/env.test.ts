@@ -93,7 +93,7 @@ describe("loadEnv", () => {
     expect(loadEnv({ ...base, RAKAZO_GIT_SHA: "abc1234" }).gitSha).toBe("abc1234");
   });
 
-  it("requires WorkMate assertions and rejects independent auth, model, and Composio credentials in production mode", () => {
+  it("requires WorkMate assertions, permits only explicit SaaS Admin Composio authoring, and rejects independent auth or model credentials", () => {
     const workmate = {
       DATABASE_URL: base.DATABASE_URL,
       NODE_ENV: "production",
@@ -104,6 +104,10 @@ describe("loadEnv", () => {
     expect(loadEnv(workmate)).toMatchObject({ integrationMode: "workmate" });
     expect(() => loadEnv({ ...workmate, BETTER_AUTH_SECRET: "independent-session-secret" })).toThrow(/rejects independent authority/i);
     expect(() => loadEnv({ ...workmate, OPENROUTER_API_KEY: "provider-key" })).toThrow(/rejects independent authority/i);
-    expect(() => loadEnv({ ...workmate, COMPOSIO_API_KEY: "composio-key" })).toThrow(/rejects independent authority/i);
+    expect(() => loadEnv({ ...workmate, COMPOSIO_API_KEY: "composio-key" })).toThrow(/authoring/i);
+    expect(loadEnv({ ...workmate, COMPOSIO_API_KEY: "composio-key", WORKMATE_RAKAZO_COMPOSIO_MODE: "authoring" })).toMatchObject({
+      workmateComposioMode: "authoring",
+      composioApiKey: "composio-key",
+    });
   });
 });
