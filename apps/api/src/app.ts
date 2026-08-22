@@ -81,18 +81,21 @@ export async function createApp(
   const jobKind = env.wakeupDriver;
   const inMemoryJobs = jobKind === "memory" ? new InMemoryJobQueue() : undefined;
   const jobs = inMemoryJobs ?? new GraphileJobPublisher(env.databaseUrl);
-  const sandbox: SandboxProvider = createRunSandbox(env.sandboxProvider, {
-    supervisorUrl: env.sandboxSupervisorUrl,
-    supervisorToken: env.sandboxSupervisorToken,
-    e2bApiKey: env.e2bApiKey,
-    daytonaApiKey: env.daytonaApiKey,
-    daytonaApiUrl: env.daytonaApiUrl,
-    daytonaTarget: env.daytonaTarget,
-    boxApiKey: env.boxApiKey,
-    boxApiUrl: env.boxApiUrl,
-    dataDir: env.dataDir,
-    prisma,
-  });
+  const sandbox: SandboxProvider =
+    env.integrationMode === "workmate" && env.sandboxProvider === "e2b" && !env.e2bApiKey
+      ? unavailableE2bSandbox()
+      : createRunSandbox(env.sandboxProvider, {
+          supervisorUrl: env.sandboxSupervisorUrl,
+          supervisorToken: env.sandboxSupervisorToken,
+          e2bApiKey: env.e2bApiKey,
+          daytonaApiKey: env.daytonaApiKey,
+          daytonaApiUrl: env.daytonaApiUrl,
+          daytonaTarget: env.daytonaTarget,
+          boxApiKey: env.boxApiKey,
+          boxApiUrl: env.boxApiUrl,
+          dataDir: env.dataDir,
+          prisma,
+        });
   const secrets = new EncryptedSecretStore(env.encryptionKey);
   const oauthLogins = new PiOAuthLogins();
   const home = new LocalAgentHomeStore(env.dataDir);
@@ -282,6 +285,16 @@ export async function createApp(
       await created.pool?.end().catch(() => undefined);
     },
   };
+}
+
+function unavailableE2bSandbox(): SandboxProvider {
+  const fail = () => { throw new Error("E2B is not configured for the WorkMate Rakazo runtime"); };
+  return new Proxy({ describe: () => ({ id: "e2b", name: "E2B", capabilities: {} }) }, {
+    get(target, property) {
+      if (property === "describe") return target.describe;
+      return fail;
+    },
+  }) as SandboxProvider;
 }
 
 const WORKMATE_SPECIALIST_CATALOGUE = [
