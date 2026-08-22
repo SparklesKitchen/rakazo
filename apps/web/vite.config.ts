@@ -123,6 +123,7 @@ export default defineConfig(({ mode }) => {
   });
   const performanceAssetDelayMs = Number(process.env.RAKAZO_PERFORMANCE_ASSET_DELAY_MS ?? 0);
   return {
+    base: "/saas-admin/rakazo/",
     plugins: [
       react(),
       tailwindcss(),
@@ -156,7 +157,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
-      host: "0.0.0.0",
+      host: "127.0.0.1",
       port: Number(process.env.WEB_PORT ?? 5173),
       allowedHosts: [previewHost],
       proxy: {

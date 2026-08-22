@@ -10,7 +10,7 @@ export function WorkMateAdminPage() {
     if (!handoff) return void setState({ agents: [], error: "Open Rakazo from WorkMate SaaS Admin." });
     url.searchParams.delete("handoff");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-    void fetch("/api/workmate/admin/catalogue", { headers: { authorization: `Bearer ${handoff}` }, credentials: "omit" })
+    void fetch("/saas-admin/rakazo/api/workmate/admin/catalogue", { headers: { authorization: `Bearer ${handoff}` }, credentials: "omit" })
       .then(async (response) => ({ response, body: await response.json() }))
       .then(({ response, body }) => setState(response.ok ? { agents: body.agents, error: null } : { agents: [], error: body.error ?? "Rakazo admin handoff was rejected." }))
       .catch(() => setState({ agents: [], error: "Rakazo admin is unavailable." }));
