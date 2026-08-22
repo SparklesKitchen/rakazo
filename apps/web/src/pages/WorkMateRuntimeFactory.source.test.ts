@@ -13,7 +13,7 @@ describe("WorkMate Rakazo application contract", () => {
   it("opens the existing Rakazo Shell rather than a custom WorkMate runtime editor", () => {
     expect(appSource).toContain("<ShellPage />");
     expect(appSource).not.toContain("WorkMateAdminPage");
-    expect(appSource).toContain("/api/admin/rakazo/launch");
+    expect(appSource).toContain("/api/admin/owner-runtime");
   });
 
   it("uses the short-lived WorkMate handoff only as Rakazo RPC authentication", () => {
@@ -21,10 +21,10 @@ describe("WorkMate Rakazo application contract", () => {
     expect(handoffSource).toContain("workmate-rakazo-assertion");
   });
 
-  it("keeps WorkMate model routing as a per-agent Rakazo sub-item", () => {
+  it("keeps WorkMate model routing per-agent and restores native SaaS Admin model controls", () => {
     expect(shellSource).toContain("WorkMateModelRouteOverlay");
     expect(menuSource).toContain("WorkMate model route");
-    expect(shellSource).toContain("!workMateEmbedded && modelsOpen");
+    expect(shellSource).toContain("{modelsOpen ? <ModelSettingsOverlay");
     expect(modelRouteSource).toContain('fetch("/api/admin/rakazo/runtime"');
     expect(modelRouteSource).not.toContain("tenantId: bot.workspaceId");
   });

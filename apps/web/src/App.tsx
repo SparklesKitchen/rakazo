@@ -29,7 +29,7 @@ export function App() {
   // fresh, server-issued handoff and enter the real Rakazo application.
   if (sessionStorage.getItem("workmate-rakazo-admin-door")) {
     sessionStorage.removeItem("workmate-rakazo-admin-door");
-    window.location.replace("/api/admin/rakazo/launch");
+    window.location.replace("/api/admin/owner-runtime");
     return null;
   }
   const session = authClient.useSession();
