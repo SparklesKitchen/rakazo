@@ -27,6 +27,7 @@ services:
       RAKAZO_INTEGRATION_MODE: workmate
       API_PORT: 3100
       DATA_DIR: /data
+      COREPACK_HOME: /tmp/corepack
       SANDBOX_PROVIDER: e2b
       AGENT_RUNTIME: pi
       WAKEUP_DRIVER: graphile
@@ -65,6 +66,7 @@ services:
       NODE_ENV: production
       RAKAZO_INTEGRATION_MODE: workmate
       DATA_DIR: /data
+      COREPACK_HOME: /tmp/corepack
       SANDBOX_PROVIDER: e2b
       AGENT_RUNTIME: pi
       WAKEUP_DRIVER: graphile
@@ -95,6 +97,7 @@ services:
       NODE_ENV: production
       API_PROXY_TARGET: http://api:3100
       RAKAZO_HOST: workmateos.co.uk
+      COREPACK_HOME: /tmp/corepack
     ports:
       - "127.0.0.1:25173:5173"
     depends_on:
