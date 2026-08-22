@@ -28,6 +28,7 @@ model User {
 
   @@unique([email])
   @@map("user")
+  @@schema("rakazo_internal")
 }
 
 model Session {
@@ -45,6 +46,7 @@ model Session {
   @@unique([token])
   @@index([userId])
   @@map("session")
+  @@schema("rakazo_internal")
 }
 
 model Account {
@@ -65,6 +67,7 @@ model Account {
 
   @@index([userId])
   @@map("account")
+  @@schema("rakazo_internal")
 }
 
 model Verification {
@@ -77,6 +80,7 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+  @@schema("rakazo_internal")
 }
 
 model Organization {
@@ -110,6 +114,7 @@ model Organization {
 
   @@unique([slug])
   @@map("organization")
+  @@schema("rakazo_internal")
 }
 
 model Member {
@@ -125,6 +130,7 @@ model Member {
   @@index([organizationId])
   @@index([userId])
   @@map("member")
+  @@schema("rakazo_internal")
 }
 
 model Invitation {
@@ -141,6 +147,7 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+  @@schema("rakazo_internal")
 }
 
 model DeploymentSettings {
@@ -156,6 +163,7 @@ model DeploymentSettings {
   updatedAt                      DateTime @updatedAt
 
   @@map("deployment_settings")
+  @@schema("rakazo_internal")
 }
 
 model UserModelCredential {
@@ -173,6 +181,7 @@ model UserModelCredential {
 
   @@index([userId, workspaceId])
   @@map("user_model_credentials")
+  @@schema("rakazo_internal")
 }
 
 model UserVoiceCredential {
@@ -189,6 +198,7 @@ model UserVoiceCredential {
 
   @@unique([userId, workspaceId, provider])
   @@map("user_voice_credentials")
+  @@schema("rakazo_internal")
 }
 
 model Bot {
@@ -234,6 +244,7 @@ model Bot {
   @@index([parentBotId])
   @@unique([workspaceId, spawnKey])
   @@map("bots")
+  @@schema("rakazo_internal")
 }
 
 model BotSection {
@@ -251,6 +262,7 @@ model BotSection {
   @@unique([workspaceId, userId, name])
   @@index([workspaceId, userId, position, createdAt])
   @@map("bot_sections")
+  @@schema("rakazo_internal")
 }
 
 model BotDeletion {
@@ -264,6 +276,7 @@ model BotDeletion {
 
   @@index([workspaceId, deletedAt])
   @@map("bot_deletions")
+  @@schema("rakazo_internal")
 }
 
 model Thread {
@@ -285,6 +298,7 @@ model Thread {
 
   @@index([workspaceId])
   @@map("threads")
+  @@schema("rakazo_internal")
 }
 
 model Message {
@@ -300,6 +314,7 @@ model Message {
   @@unique([threadId, seq])
   @@index([threadId, seq])
   @@map("messages")
+  @@schema("rakazo_internal")
 }
 
 model Event {
@@ -320,6 +335,7 @@ model Event {
   @@index([threadId, seq])
   @@index([runId, type, seq])
   @@map("events")
+  @@schema("rakazo_internal")
 }
 
 model Task {
@@ -339,6 +355,7 @@ model Task {
 
   @@index([workspaceId, botId])
   @@map("tasks")
+  @@schema("rakazo_internal")
 }
 
 model Run {
@@ -375,6 +392,7 @@ model Run {
   @@index([status, updatedAt, id])
   @@index([workspaceId, botId])
   @@map("runs")
+  @@schema("rakazo_internal")
 }
 
 model Attempt {
@@ -389,6 +407,7 @@ model Attempt {
 
   @@index([runId])
   @@map("attempts")
+  @@schema("rakazo_internal")
 }
 
 model ExternalEffect {
@@ -408,6 +427,7 @@ model ExternalEffect {
   @@unique([idempotencyKey])
   @@index([runId, status])
   @@map("external_effects")
+  @@schema("rakazo_internal")
 }
 
 model Routine {
@@ -431,6 +451,7 @@ model Routine {
   @@index([active, nextRunAt])
   @@index([workspaceId, botId])
   @@map("routines")
+  @@schema("rakazo_internal")
 }
 
 model TaughtSkill {
@@ -456,6 +477,7 @@ model TaughtSkill {
   // Partial unique index taught_skills_botId_recording_key is created in SQL:
   // one recording session per bot.
   @@map("taught_skills")
+  @@schema("rakazo_internal")
 }
 
 model Connection {
@@ -474,6 +496,7 @@ model Connection {
 
   @@index([workspaceId, userId])
   @@map("connections")
+  @@schema("rakazo_internal")
 }
 
 model CapabilityInstall {
@@ -491,6 +514,7 @@ model CapabilityInstall {
 
   @@index([workspaceId, userId])
   @@map("capability_installs")
+  @@schema("rakazo_internal")
 }
 
 model MemoryDocument {
@@ -511,6 +535,7 @@ model MemoryDocument {
   @@unique([workspaceId, scope, botId, path])
   @@index([workspaceId, userId])
   @@map("memory_documents")
+  @@schema("rakazo_internal")
 }
 
 model MemoryRevision {
@@ -525,6 +550,7 @@ model MemoryRevision {
 
   @@unique([documentId, revision])
   @@map("memory_revisions")
+  @@schema("rakazo_internal")
 }
 
 model AgentHome {
@@ -539,6 +565,7 @@ model AgentHome {
   updatedAt   DateTime @updatedAt
 
   @@map("agent_homes")
+  @@schema("rakazo_internal")
 }
 
 model BrowserProfile {
@@ -553,6 +580,7 @@ model BrowserProfile {
   updatedAt   DateTime @updatedAt
 
   @@map("browser_profiles")
+  @@schema("rakazo_internal")
 }
 
 model Computer {
@@ -584,6 +612,7 @@ model Computer {
 
   @@index([workspaceId, scope])
   @@map("computers")
+  @@schema("rakazo_internal")
 }
 
 model ComputerExecutionLease {
@@ -601,6 +630,7 @@ model ComputerExecutionLease {
   @@index([runId])
   @@index([computerId, expiresAt])
   @@map("computer_execution_leases")
+  @@schema("rakazo_internal")
 }
 
 model Artifact {
@@ -620,6 +650,7 @@ model Artifact {
 
   @@index([workspaceId, botId])
   @@map("artifacts")
+  @@schema("rakazo_internal")
 }
 
 model UsageRecord {
@@ -639,6 +670,7 @@ model UsageRecord {
 
   @@index([workspaceId, userId, createdAt])
   @@map("usage_records")
+  @@schema("rakazo_internal")
 }
 
 model NotificationPreference {
@@ -652,6 +684,7 @@ model NotificationPreference {
 
   @@unique([workspaceId, userId])
   @@map("notification_preferences")
+  @@schema("rakazo_internal")
 }
 
 model Secret {
@@ -665,4 +698,5 @@ model Secret {
 
   @@index([userId, workspaceId])
   @@map("secrets")
+  @@schema("rakazo_internal")
 }
