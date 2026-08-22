@@ -25,4 +25,10 @@ describe("WorkMate Rakazo application contract", () => {
     expect(menuSource).toContain("WorkMate model route");
     expect(shellSource).toContain("!workMateEmbedded && modelsOpen");
   });
+
+  it("retains native per-agent instructions and taught-skill controls", () => {
+    expect(shellSource).toContain("Instructions");
+    expect(shellSource).toContain("TeachComputerSection");
+    expect(shellSource).toContain("instructions,");
+  });
 });

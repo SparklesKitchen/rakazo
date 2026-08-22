@@ -2587,6 +2587,7 @@ function BotSettings({
   const [name, setName] = useState(bot.name);
   const [title, setTitle] = useState(bot.title);
   const [description, setDescription] = useState(bot.description);
+  const [instructions, setInstructions] = useState(bot.instructions);
   const [computerMode, setComputerMode] = useState(bot.computerMode);
   const [autoSpeak, setAutoSpeak] = useState(bot.autoSpeak);
   const [voiceId, setVoiceId] = useState(bot.voiceId ?? "");
@@ -2631,6 +2632,15 @@ function BotSettings({
           className="mt-2 w-full rounded-[11px] border border-[#26262A] bg-transparent px-3.5 py-3 text-[#ECECEE]"
         />
       </label>
+      <label className="mt-4 block text-[14px] text-[#85858A]">
+        Instructions
+        <textarea
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          rows={10}
+          className="mt-2 w-full rounded-[11px] border border-[#26262A] bg-transparent px-3.5 py-3 text-[#ECECEE]"
+        />
+      </label>
       <ComputerModePicker value={computerMode} onChange={setComputerMode} />
       <label className="mt-5 flex cursor-pointer items-center gap-3 text-[14px] text-[#C9C9CE]">
         <input
@@ -2669,7 +2679,7 @@ function BotSettings({
               name,
               title,
               description,
-              instructions: description,
+              instructions,
               computerMode,
               autoSpeak,
               voiceId: voiceId || null,
