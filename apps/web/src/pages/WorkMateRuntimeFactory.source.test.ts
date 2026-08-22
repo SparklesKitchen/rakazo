@@ -31,4 +31,9 @@ describe("WorkMate Rakazo application contract", () => {
     expect(shellSource).toContain("TeachComputerSection");
     expect(shellSource).toContain("instructions,");
   });
+
+  it("shows a retryable failure instead of leaving the composer without an agent", () => {
+    expect(shellSource).toContain("Rakazo could not load your WorkMate agents.");
+    expect(shellSource).toContain("Retry loading agents");
+  });
 });

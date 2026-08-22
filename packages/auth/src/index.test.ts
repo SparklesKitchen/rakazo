@@ -27,6 +27,7 @@ describe("WorkMate assertion policy", () => {
     adminUserId: "admin-user-1",
     adminEmail: "owner@workmateos.co.uk",
     tenantId: "tenant-1",
+    workspaceId: "workspace-1",
     iat: Math.floor(now / 1000) - 10,
     exp: Math.floor(now / 1000) + 60,
   };
@@ -34,6 +35,7 @@ describe("WorkMate assertion policy", () => {
   it("accepts only a currently valid assertion signed by WorkMate", () => {
     expect(verifyWorkMateAssertion(assertion(base), assertionKey, now)).toMatchObject({
       tenantId: "tenant-1",
+      workspaceId: "workspace-1",
     });
   });
 
@@ -41,6 +43,7 @@ describe("WorkMate assertion policy", () => {
     expect(verifyWorkMateAssertion(`${assertion(base)}x`, assertionKey, now)).toBeNull();
     expect(verifyWorkMateAssertion(assertion({ ...base, exp: Math.floor(now / 1000) - 1 }), assertionKey, now)).toBeNull();
     expect(verifyWorkMateAssertion(assertion({ ...base, aud: "other-service" }), assertionKey, now)).toBeNull();
+    expect(verifyWorkMateAssertion(assertion({ ...base, workspaceId: "" }), assertionKey, now)).toBeNull();
     expect(verifyWorkMateAssertion(assertion({ ...base, exp: base.iat + 901 }), assertionKey, now)).toBeNull();
   });
 });

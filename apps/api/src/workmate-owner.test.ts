@@ -20,11 +20,11 @@ describe("WorkMate Rakazo owner actor", () => {
       iat: now, exp: now + 300,
       jti: "assertion-1", adminSessionId: "admin-session-1",
       adminUserId: "137e2f30-ff48-46f7-a3df-881cfb099c80",
-      adminEmail: "chris@workmateos.co.uk", tenantId: "12c07c2b-edfd-4516-8dd6-e4397e88d532",
+      adminEmail: "chris@workmateos.co.uk", tenantId: "12c07c2b-edfd-4516-8dd6-e4397e88d532", workspaceId: "22222222-2222-4222-8222-222222222222",
     }), secret);
     expect(actor).toMatchObject({
       userId: "137e2f30-ff48-46f7-a3df-881cfb099c80",
-      workspaceId: "12c07c2b-edfd-4516-8dd6-e4397e88d532",
+      workspaceId: "22222222-2222-4222-8222-222222222222",
       isDeploymentOwner: true,
     });
   });

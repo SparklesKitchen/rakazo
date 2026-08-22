@@ -30,6 +30,7 @@ export interface WorkMateAssertionClaims {
   adminUserId: string;
   adminEmail: string;
   tenantId: string;
+  workspaceId: string;
   iat: number;
   exp: number;
 }
@@ -62,6 +63,7 @@ export function verifyWorkMateAssertion(
     !nonEmpty(claims.adminUserId) ||
     !nonEmpty(claims.adminEmail) ||
     !nonEmpty(claims.tenantId) ||
+    !nonEmpty(claims.workspaceId) ||
     !Number.isInteger(claims.iat) ||
     !Number.isInteger(claims.exp) ||
     claims.iat > nowSeconds ||

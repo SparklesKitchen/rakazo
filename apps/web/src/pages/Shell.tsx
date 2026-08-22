@@ -170,6 +170,7 @@ export function ShellPage() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [initialBotsLoaded, setInitialBotsLoaded] = useState(false);
   const [bootstrapMe, setBootstrapMe] = useState<Me | null>();
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [routineDraft, setRoutineDraft] = useState({
     name: "",
     prompt: "",
@@ -273,6 +274,7 @@ export function ShellPage() {
     ]);
     markOnce("rk:renderer:bots-response");
     setBots(list);
+    setBootstrapError(null);
     setBotSections(sections);
     setInitialBotsLoaded(true);
     if (archived) setArchivedBots(archived);
@@ -400,7 +402,8 @@ export function ShellPage() {
       .catch(() => {
         if (cancelled) return;
         setBootstrapMe(null);
-        void refreshBots(true);
+        setBootstrapError("Rakazo could not load your WorkMate agents.");
+        void refreshBots(true).catch(() => undefined);
       });
     let refreshTimer: number | undefined;
     const refreshVisibleBots = () => {
@@ -1198,6 +1201,12 @@ export function ShellPage() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col bg-[#0D0D0E]">
+        {bootstrapError ? (
+          <div className="flex items-center justify-between border-b border-amber-500/30 bg-amber-500/10 px-5 py-3 text-sm text-amber-100">
+            <span>{bootstrapError}</span>
+            <button type="button" className="rounded border border-amber-300/50 px-3 py-1 hover:bg-amber-200/10" onClick={() => void refreshBots(true).catch(() => undefined)}>Retry loading agents</button>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between border-b border-[#141416] px-[22px] py-[17px]">
           <button
             type="button"

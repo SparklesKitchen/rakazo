@@ -10,10 +10,10 @@ import { createRepos, type PrismaClient } from "@rakazo/db";
 export function workMateActorFromAssertion(assertion: string | undefined, secret: string): Actor | null {
   const claims = verifyWorkMateAssertion(assertion, secret);
   if (!claims || claims.kind !== "admin-door") return null;
-  if (!claims.adminUserId || !claims.adminEmail || !claims.tenantId) return null;
+  if (!claims.adminUserId || !claims.adminEmail || !claims.tenantId || !claims.workspaceId) return null;
   return {
     userId: claims.adminUserId,
-    workspaceId: claims.tenantId,
+    workspaceId: claims.workspaceId,
     email: claims.adminEmail,
     isDeploymentOwner: true,
   };
