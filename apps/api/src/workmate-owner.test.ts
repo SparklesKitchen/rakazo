@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { workMateActorFromAssertion } from "./workmate-owner.js";
+import { workMateActorFromAssertion, workMateBotDefinition } from "./workmate-owner.js";
 
 const secret = "workmate-rakazo-test-secret";
 
@@ -29,5 +29,22 @@ describe("WorkMate Rakazo owner actor", () => {
   it("rejects malformed or non-admin WorkMate assertions", () => {
     expect(workMateActorFromAssertion("bad", secret)).toBeNull();
     expect(workMateActorFromAssertion(assertion({ kind: "reach-dispatch" }), secret)).toBeNull();
+  });
+
+  it("turns a WorkMate template into a real Rakazo bot definition with native configuration controls", () => {
+    expect(workMateBotDefinition({
+      template_key: "workmate-cal",
+      display_name: "WorkMate Cal",
+      agent_definition: { role: "Scheduling and availability", tools: ["calendar-sync", "video-conferencing"] },
+    })).toMatchObject({
+      name: "WorkMate Cal",
+      title: "Scheduling and availability",
+      description: "WorkMate specialist runtime: workmate-cal",
+    });
+    expect(workMateBotDefinition({
+      template_key: "workmate-cal",
+      display_name: "WorkMate Cal",
+      agent_definition: { role: "Scheduling and availability", tools: ["calendar-sync", "video-conferencing"] },
+    }).instructions).toMatch(/native Rakazo skills, instructions, routines, and computer use/i);
   });
 });

@@ -19,7 +19,27 @@ export function workMateActorFromAssertion(assertion: string | undefined, secret
   };
 }
 
-type RuntimeTemplate = { template_key: string; display_name: string };
+export type RuntimeTemplate = {
+  template_key: string;
+  display_name: string;
+  agent_definition: { role?: string; tools?: string[] } | null;
+};
+
+export function workMateBotDefinition(template: RuntimeTemplate) {
+  const role = template.agent_definition?.role?.trim() || "WorkMate specialist runtime";
+  const tools = template.agent_definition?.tools?.filter((tool) => typeof tool === "string" && tool.trim()) ?? [];
+  return {
+    name: template.display_name,
+    title: role,
+    description: `WorkMate specialist runtime: ${template.template_key}`,
+    instructions: [
+      `You are ${template.display_name}, WorkMate's ${role}.`,
+      tools.length ? `Your approved WorkMate capability candidates are: ${tools.join(", ")}.` : "",
+      "Configure native Rakazo skills, instructions, routines, and computer use here.",
+      "WorkMate remains the authority for customer identity, model routing, approvals, and connected accounts.",
+    ].filter(Boolean).join("\n\n"),
+  };
+}
 
 /**
  * Materialise the WorkMate-owned template catalogue into Rakazo's real bot
@@ -50,22 +70,30 @@ export async function ensureWorkMateOwnerWorkspace(prisma: PrismaClient, actor: 
   });
 
   const templates = await prisma.$queryRawUnsafe<RuntimeTemplate[]>(
-    "select template_key, display_name from rakazo.runtime_templates where status = 'approved' order by template_key",
+    "select template_key, display_name, agent_definition from rakazo.runtime_templates where status = 'approved' order by template_key",
   );
   const existing = await prisma.bot.findMany({
     where: { workspaceId: actor.workspaceId, userId: actor.userId, spawnKey: { startsWith: "workmate-template:" } },
-    select: { spawnKey: true },
+    select: { id: true, spawnKey: true },
   });
-  const present = new Set(existing.map((bot) => bot.spawnKey));
+  const present = new Map(existing.map((bot) => [bot.spawnKey, bot]));
+  const approvedSpawnKeys = new Set(templates.map((template) => `workmate-template:${template.template_key}`));
+  const staleIds = existing.filter((bot) => !approvedSpawnKeys.has(bot.spawnKey ?? "")).map((bot) => bot.id);
+  if (staleIds.length) await prisma.bot.updateMany({ where: { id: { in: staleIds } }, data: { archivedAt: now } });
   const repos = createRepos(prisma);
   for (const template of templates) {
     const spawnKey = `workmate-template:${template.template_key}`;
-    if (present.has(spawnKey)) continue;
+    const definition = workMateBotDefinition(template);
+    const current = present.get(spawnKey);
+    if (current) {
+      await prisma.bot.update({
+        where: { id: current.id },
+        data: { ...definition, archivedAt: null },
+      });
+      continue;
+    }
     await repos.createBot(actor, {
-      name: template.display_name,
-      title: "WorkMate runtime",
-      description: `WorkMate specialist runtime: ${template.template_key}`,
-      instructions: "Configure this existing WorkMate runtime in Rakazo. WorkMate remains the authority for customer identity, model routing, approvals, and connected accounts.",
+      ...definition,
       notifyOnFinish: true,
       computerMode: "team",
       spawnKey,
