@@ -177,7 +177,7 @@ function BotSkillsPicker({
 }: {
   skills: AgentSkillCatalogEntry[];
   value: string[] | null;
-  onChange: (skillIds: string[]) => void;
+  onChange: (skillIds: string[] | null) => void;
 }) {
   const { t } = useLingui();
   const ids = useId();
@@ -222,12 +222,7 @@ function BotSkillsPicker({
               aria-label={t`Search skills`}
               className="min-w-0 flex-1"
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onChange(skills.map((skill) => skill.id))}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
               <Trans>Select all</Trans>
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => onChange([])}>
