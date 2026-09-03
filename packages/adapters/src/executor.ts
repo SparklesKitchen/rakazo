@@ -640,11 +640,9 @@ export function createRunExecutor(deps: ExecutorDeps) {
             routine.timezone,
           );
       const previousLastRunAt = routine.lastRunAt;
-      const skillRecords = await listAgentSkillRecords(deps.prisma, {
-        spaceId: routine.spaceId,
-        userId: routine.userId,
-      });
-      const routinePrompt = expandSkillReferencesInPrompt(routine.prompt, skillRecords);
+      // Keep the raw routine prompt. continueRun filters by bot.agentSkillIds
+      // then expands skill mentions. Expanding here would bake unattached
+      // skill content into the task before that filter runs.
       const claimed = await deps.prisma.$transaction(async (tx) => {
         const updated = await tx.routine.updateMany({
           where: { id: routine.id, active: true, nextRunAt: scheduledAt },
@@ -661,7 +659,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
             botId: bot.id,
             threadId: thread.id,
             userId: routine.userId,
-            prompt: routinePrompt,
+            prompt: routine.prompt,
             status: "queued",
           },
         });
