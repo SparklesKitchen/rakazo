@@ -39,6 +39,7 @@ import {
   createStreamingRedactor,
   endsSentence,
   expandSkillReferencesInPrompt,
+  filterAttachedAgentSkills,
   formatSkillRunPrompt,
   formatSkillsCatalogInstruction,
   humanizeToolName,
@@ -842,7 +843,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
           settings,
           configuredMemory,
           savedSkills,
-          agentSkills,
+          availableAgentSkills,
         ] = await Promise.all([
           deps.prisma.bot.findUniqueOrThrow({
             where: { id: run.botId },
@@ -881,6 +882,7 @@ export function createRunExecutor(deps: ExecutorDeps) {
             userId: run.userId,
           }),
         ]);
+        const agentSkills = filterAttachedAgentSkills(availableAgentSkills, bot.agentSkillIds);
         const hasModelOverride = Boolean(bot.modelProvider && bot.modelId);
         const overrideCredential =
           hasModelOverride && bot.modelProvider
@@ -2176,6 +2178,10 @@ export function createRunExecutor(deps: ExecutorDeps) {
               {
                 spaceId: run.spaceId,
                 userId: run.userId,
+                allowedSkillIds:
+                  bot.agentSkillIds == null
+                    ? undefined
+                    : new Set(agentSkills.map((skill) => skill.id)),
               },
               {
                 name: args.name ? String(args.name) : undefined,
