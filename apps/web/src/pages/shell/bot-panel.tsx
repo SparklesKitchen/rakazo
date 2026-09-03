@@ -201,7 +201,9 @@ function BotSkillsPicker({
 
   return (
     <div className="mt-4 text-[14px] text-muted-foreground">
-      <Trans>Skills</Trans>
+      <div>
+        <Trans>Skills</Trans>
+      </div>
       <details className="group/skills mt-2" data-testid="bot-skills-picker">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-md border border-input px-3 py-2 text-foreground">
           <span>

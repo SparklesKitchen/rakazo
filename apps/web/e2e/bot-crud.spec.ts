@@ -71,9 +71,9 @@ test("bot creation, editing, and deletion persist", async ({ page }, testInfo) =
   await expect(settings.getByRole("button", { name: "Recover computer" })).toHaveCount(0);
   await expect(settings.getByRole("button", { name: "Reset computer" })).toHaveCount(0);
   await expect(settings.getByRole("button", { name: "Update computer" })).toHaveCount(0);
-  await expect(settings.getByText("Skills", { exact: true })).toBeVisible();
   const skillsPicker = settings.getByTestId("bot-skills-picker");
   await expect(skillsPicker).toBeVisible();
+  await expect(settings.getByText("Skills", { exact: true })).toBeVisible();
   await skillsPicker.locator("summary").click();
   await expect(skillsPicker.getByPlaceholder("Search skills")).toBeVisible();
   await captureScreenshot(page, testInfo, "bot-skills-picker");
