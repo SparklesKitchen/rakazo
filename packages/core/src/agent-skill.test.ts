@@ -255,6 +255,26 @@ describe("skill prompt helpers", () => {
     expect(expandSkillReferencesInPrompt(twice, skills)).toBe(twice);
   });
 
+  it("leaves a detached @skill mention unexpanded once the bot allowlist is applied", () => {
+    const skills = [
+      {
+        id: "skill-1",
+        name: "Daily standup",
+        description: "standup",
+        source: "user" as const,
+        readOnly: false,
+        content: SAMPLE,
+      },
+    ];
+    const prompt = "Run @Daily standup then email me";
+    // continueRun composes these two for routine and test runs alike.
+    const restricted = expandSkillReferencesInPrompt(prompt, filterAttachedAgentSkills(skills, []));
+    expect(restricted).toBe(prompt);
+    expect(restricted).not.toContain(SAMPLE.trim());
+    const legacy = expandSkillReferencesInPrompt(prompt, filterAttachedAgentSkills(skills, null));
+    expect(legacy).toContain("Use skill: Daily standup");
+  });
+
   it("builds catalog instructions for auto-use", () => {
     const line = formatSkillsCatalogInstruction([
       {

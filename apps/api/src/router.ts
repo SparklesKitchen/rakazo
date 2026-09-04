@@ -85,8 +85,6 @@ import {
   ACTIVE_RUN_STATUSES,
   AttachmentValidationError,
   containsSecret,
-  expandSkillReferencesInPrompt,
-  filterAttachedAgentSkills,
   hasMixedOneShotSchedule,
   isOneShotRoutineCrons,
   nextCronDateAcrossStrict,
@@ -2076,11 +2074,10 @@ export function createRouter(deps: RouterDeps) {
           });
           if (existing) return { runId: existing.id };
         }
-        const skillRecords = filterAttachedAgentSkills(
-          await agentSkills.listWithContent(context.actor),
-          bot.agentSkillIds,
-        );
-        const prompt = expandSkillReferencesInPrompt(routine.prompt, skillRecords);
+        // Store the raw routine prompt. continueRun filters the catalogue by
+        // bot.agentSkillIds and expands skill mentions at execution time, so a
+        // skill detached after queueing never reaches the run.
+        const prompt = routine.prompt;
         let run: { id: string };
         try {
           // Task + run must commit together so a nonce collision cannot leave an orphan queued Task.
